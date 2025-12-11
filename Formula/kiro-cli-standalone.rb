@@ -3,7 +3,7 @@ class KiroCliStandalone < Formula
   homepage "https://kiro.dev/docs/cli/"
   license "Proprietary"
 
-  url "https://cli.kiro.dev/install", using: :curl
+  url "7487a65cf310b7fb59b357c4b5e6e3f3259d383f4394ecedb39acf70f307cffb", using: :curl
   version "latest"
   sha256 :no_check
 
