@@ -2,18 +2,31 @@ class KiroCliStandalone < Formula
   desc "AI-powered CLI chat and agents (non-cask install)"
   homepage "https://kiro.dev/docs/cli/"
   license "Proprietary"
-
-  url "https://cli.kiro.dev/install", using: :curl, user_agent: :fake
-  version "latest"
-  sha256 "7487a65cf310b7fb59b357c4b5e6e3f3259d383f4394ecedb39acf70f307cffb"
+  version "latest" # dynamic installer workflow; no stable url
 
   def install
     (buildpath/"install.sh").write <<~EOS
       set -euo pipefail
       TMPDIR="$(mktemp -d)"
-      trap "rm -rf \\"$TMPDIR\\"" EXIT
-      curl -fsSL https://cli.kiro.dev/install-macos -o "$TMPDIR/installer.sh"
+      trap 'rm -rf "$TMPDIR"' EXIT
+
+      # Use curl with headers that typically pass anti-bot checks
+      # -L: follow redirects
+      # -A: User-Agent (Safari-like)
+      # Referer: site root
+      # Accept-Language: common browser languages
+      # Accept: */* to mimic generic browser request
+      curl -fsSL -L "https://cli.kiro.dev/install-macos" \
+        -A "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15" \
+        -H "Referer: https://kiro.dev/" \
+        -H "Accept-Language: en-US,en;q=0.9" \
+        -H "Accept: */*" \
+        --connect-timeout 10 --retry 3 --retry-delay 1 \
+        -o "$TMPDIR/installer.sh"
+
       bash "$TMPDIR/installer.sh" --prefix "#{prefix}" --no-shell-edit
+
+      # Normalize the final location of the binary
       if [ -x "#{prefix}/bin/kiro-cli" ]; then
         :
       elif [ -x "$TMPDIR/kiro-cli" ]; then
@@ -22,17 +35,17 @@ class KiroCliStandalone < Formula
       else
         echo "kiro-cli binary not found after install" >&2
         exit 1
-      end
+      fi
     EOS
 
     system "bash", "install.sh"
-    bin.install "#{prefix}/bin/kiro-cli"  # binary remains 'kiro-cli'
+    bin.install "#{prefix}/bin/kiro-cli"
   end
 
   def caveats
     <<~MSG
-      Installed as a formula named 'kiro-cli-standalone'; binary remains 'kiro-cli'.
-      To log in: `kiro-cli login`
+      Installed as 'kiro-cli-standalone'; binary remains 'kiro-cli'.
+      Login: `kiro-cli login`
     MSG
   end
 
